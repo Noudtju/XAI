@@ -48,9 +48,12 @@ app.layout = html.Div([
     html.Div(id='completion-message', style={'color': 'green', 'fontSize': '18px', 'marginTop': '20px'}),
     html.Div(id='post-phase1-buttons', style={'marginTop': '20px'}, children=[
         html.Button("Control Phase", id='control-btn', n_clicks=0, style={'display': 'none'}),
-        html.Button("Treatment Phase", id='treatment-btn', n_clicks=0, style={'display': 'none'})
+        html.Button("Treatment 1 Patch", id='treatment1-btn', n_clicks=0, style={'marginRight': '10px', 'display': 'none'}),
+        html.Button("Treatment 2 Rectangle", id='treatment2-btn', n_clicks=0, style={'display': 'none'})
     ]),
-    html.Div(id='control-phase-content', style={'marginTop': '20px'})
+    html.Div(id='treatment1-content', style={'marginTop': '20px'}),
+    html.Div(id='control-phase-content', style={'marginTop': '20px'}),
+    html.Div(id='treatment2-content', style={'marginTop': '20px'}),
 ])
 
 @app.callback(
@@ -105,13 +108,14 @@ def save_guess(n_clicks, selection, index, guesses):
 # Show Control and Treatment phase buttons after completion message
 @app.callback(
     Output('control-btn', 'style'),
-    Output('treatment-btn', 'style'),
+    Output('treatment1-btn', 'style'),
+    Output('treatment2-btn', 'style'),
     Input('completion-message', 'children')
 )
 def show_phase_buttons(msg):
     if msg:
-        return {'display': 'inline-block', 'marginRight': '10px'}, {'display': 'inline-block'}
-    return {'display': 'none'}, {'display': 'none'}
+        return {'display': 'inline-block', 'marginRight': '10px'}, {'display': 'inline-block', 'marginRight': '10px'}, {'display': 'inline-block'}
+    return {'display': 'none'}, {'display': 'none'}, {'display': 'none'}
 
 
 @app.callback(
@@ -131,6 +135,105 @@ def render_control_phase_all(n_clicks):
                 html.H4(f"This is a {class_name.replace('_', ' ')}"),
                 html.Img(src=encoded, style={'width': '400px', 'marginBottom': '40px'})
             ]))
+    return children
+
+# Treatment 1 Patch callback
+@app.callback(
+    Output('treatment1-content', 'children'),
+    Input('treatment1-btn', 'n_clicks'),
+    prevent_initial_call=True
+)
+def render_treatment1_patch(n_clicks):
+    children = []
+    for class_name in CLASS_NAMES:
+        class_dir = os.path.join(VIS_RESULT_DIR, class_name)
+        if not os.path.exists(class_dir):
+            continue
+        subdirs = [d for d in os.listdir(class_dir) if os.path.isdir(os.path.join(class_dir, d)) and class_name in d]
+        if not subdirs:
+            continue
+        full_path = os.path.join(class_dir, subdirs[0])
+        patch_files = [f for f in os.listdir(full_path) if f.endswith('_patch.png')]
+
+        patch_images = []
+        for file in patch_files:
+            parts = file.replace('.png', '').split('_')
+            mul = next((p[3:] for p in parts if p.startswith('mul')), 'N/A')
+            sim = next((p[3:] for p in parts if p.startswith('sim')), 'N/A')
+            weight = next((p[1:] for p in parts if p.startswith('w')), 'N/A')
+
+            img_path = os.path.join(full_path, file)
+            encoded = encode_image(img_path)
+
+            patch_images.append(html.Div([
+                html.Img(src=encoded, style={'width': '150px'}),
+                html.P(f"Mul: {mul} | Similarity: {sim} | Weight: {weight}", style={'fontSize': '12px'})
+            ], style={'marginRight': '20px'}))
+
+        # Fetch class-level image
+        jpg_files = [f for f in os.listdir(class_dir) if f.lower().endswith('.jpg')]
+        class_img = None
+        if jpg_files:
+            class_img_path = os.path.join(class_dir, jpg_files[0])
+            class_img_encoded = encode_image(class_img_path)
+            class_img = html.Img(src=class_img_encoded, style={'width': '150px', 'marginRight': '15px'})
+
+        children.append(html.Div([
+            html.Div([
+                html.H4(class_name.replace('_', ' ')),
+                class_img
+            ], style={'display': 'flex', 'alignItems': 'center', 'marginBottom': '10px'}),
+            html.Div(patch_images, style={'display': 'flex', 'flexWrap': 'wrap', 'marginBottom': '40px'})
+        ]))
+    return children
+
+@app.callback(
+    Output('treatment2-content', 'children'),
+    Input('treatment2-btn', 'n_clicks'),
+    prevent_initial_call=True
+)
+def render_treatment2_rectangle(n_clicks):
+    children = []
+    for class_name in CLASS_NAMES:
+        class_dir = os.path.join(VIS_RESULT_DIR, class_name)
+        if not os.path.exists(class_dir):
+            continue
+        subdirs = [d for d in os.listdir(class_dir) if os.path.isdir(os.path.join(class_dir, d)) and class_name in d]
+        if not subdirs:
+            continue
+        full_path = os.path.join(class_dir, subdirs[0])
+        rect_files = [f for f in os.listdir(full_path) if f.endswith('_rect.png')]
+
+        rect_images = []
+        for file in rect_files:
+            parts = file.replace('.png', '').split('_')
+            mul = next((p[3:] for p in parts if p.startswith('mul')), 'N/A')
+            sim = next((p[3:] for p in parts if p.startswith('sim')), 'N/A')
+            weight = next((p[1:] for p in parts if p.startswith('w')), 'N/A')
+
+            img_path = os.path.join(full_path, file)
+            encoded = encode_image(img_path)
+
+            rect_images.append(html.Div([
+                html.Img(src=encoded, style={'width': '150px'}),
+                html.P(f"Mul: {mul} | Similarity: {sim} | Weight: {weight}", style={'fontSize': '12px'})
+            ], style={'marginRight': '20px'}))
+
+        # Fetch class-level image
+        jpg_files = [f for f in os.listdir(class_dir) if f.lower().endswith('.jpg')]
+        class_img = None
+        if jpg_files:
+            class_img_path = os.path.join(class_dir, jpg_files[0])
+            class_img_encoded = encode_image(class_img_path)
+            class_img = html.Img(src=class_img_encoded, style={'width': '150px', 'marginRight': '15px'})
+
+        children.append(html.Div([
+            html.Div([
+                html.H4(class_name.replace('_', ' ')),
+                class_img
+            ], style={'display': 'flex', 'alignItems': 'center', 'marginBottom': '10px'}),
+            html.Div(rect_images, style={'display': 'flex', 'flexWrap': 'wrap', 'marginBottom': '40px'})
+        ]))
     return children
 
 if __name__ == '__main__':
