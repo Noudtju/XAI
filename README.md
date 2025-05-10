@@ -36,7 +36,10 @@ The app operates in three main phases:
 
 Follow the steps below to set up and run the application:
 
-**Step 1**: Download the final curated dataset for user testing from: _[provide download link]_
+**Step 1**: Download the final curated dataset for user testing from: 
+```url
+https://drive.google.com/file/d/1xUII_m0ZzmHWLHYGLXy5eiwOQPGrGwbq/view?usp=sharing
+``` 
 
 **Step 2**: Create a directory named `data` inside the project root (`XAI_Dash_App`).
 
