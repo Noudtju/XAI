@@ -12,7 +12,7 @@ CLASS_NAMES = ['Acadian_Flycatcher', 'Western_Meadowlark', 'Common_Yellowthroat'
 TOTAL_TRIALS = len(CLASS_NAMES)
 test_trials = []
 
-# Prepare 1 image per class, shuffled
+# Prepare 1 image per class, randomized
 def prepare_trials():
     trials = []
     for class_name in CLASS_NAMES:
@@ -30,6 +30,7 @@ def prepare_trials():
     random.shuffle(trials)
     return trials
 
+#Prepare 1 image per class for testing, randomized
 def prepare_test_trials():
     trials = []
     for class_name in CLASS_NAMES:
@@ -61,6 +62,7 @@ if os.path.exists(csv_path):
     user_guesses_data = pd.read_csv(csv_path).to_dict(orient='records')
 trials = prepare_trials()
 
+# Initialize layout
 app.layout = html.Div([
     dcc.Store(id='trial-index', data=0),
     dcc.Store(id='guesses', data=[]),
@@ -197,6 +199,7 @@ def show_phase3_button(n1, n2, n3):
         return {'display': 'inline-block', 'marginTop': '20px'}
     return {'display': 'none'}
 
+# Phase 3 callback
 @app.callback(
     Output('phase3-index', 'data'),
     Output('phase3-guesses', 'data'),
@@ -237,13 +240,13 @@ def handle_phase3(to_phase3_clicks, next_clicks, selection, index, guesses, user
         if index < len(test_trials) and selection:
             trial = test_trials[index]
             global user_guesses_data
-            # Instead of appending, update the existing record for the same class
             for record in user_guesses_data:
                 if record["class_name"] == trial["class_name"]:
                     record["testing_phase_class_shown"] = trial["class_name"]
                     record["testing_phase_user_answer"] = selection
                     break
             index += 1
+            
             # Write combined CSV
             df_existing = pd.read_csv(csv_path) if os.path.exists(csv_path) else pd.DataFrame()
             df_new = pd.DataFrame(user_guesses_data)
@@ -268,6 +271,7 @@ def handle_phase3(to_phase3_clicks, next_clicks, selection, index, guesses, user
 
     return dash.no_update, dash.no_update, dash.no_update
 
+# Control Phase callback
 @app.callback(
     Output('control-phase-content', 'children'),
     Input('control-btn', 'n_clicks'),
@@ -351,6 +355,7 @@ def render_treatment1_patch(n_clicks):
         ]))
     return children
 
+# Treatment 2 Rectangle callback
 @app.callback(
     Output('treatment2-content', 'children'),
     Input('treatment2-btn', 'n_clicks'),
@@ -407,6 +412,7 @@ def render_treatment2_rectangle(n_clicks):
         ]))
     return children
 
+# Hide phase 2 container when moving to phase 3
 @app.callback(
     Output('phase2-container', 'style'),
     Input('to-phase3-btn', 'n_clicks'),
