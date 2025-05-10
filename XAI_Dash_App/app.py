@@ -6,8 +6,8 @@ import random
 import base64
 
 # Constants
-VIS_RESULT_DIR = 'data/Final_Dataset/visualization_results'
-TEST_IMAGE_DIR = 'data/Final_Dataset/train'
+VIS_RESULT_DIR = 'data/dataset/visualization_results'
+TEST_IMAGE_DIR = 'data/dataset/train'
 CLASS_NAMES = ['Acadian_Flycatcher', 'Western_Meadowlark', 'Common_Yellowthroat', 'Gadwall', 'Henslow_Sparrow']
 TOTAL_TRIALS = len(CLASS_NAMES)
 test_trials = []
