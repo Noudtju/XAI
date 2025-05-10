@@ -7,8 +7,10 @@ import base64
 
 # Constants
 VIS_RESULT_DIR = 'data/Final_Dataset/visualization_results'
+TEST_IMAGE_DIR = 'data/Final_Dataset/train'
 CLASS_NAMES = ['Acadian_Flycatcher', 'Western_Meadowlark', 'Common_Yellowthroat', 'Gadwall', 'Henslow_Sparrow']
 TOTAL_TRIALS = len(CLASS_NAMES)
+test_trials = []
 
 # Prepare 1 image per class, shuffled
 def prepare_trials():
@@ -28,6 +30,23 @@ def prepare_trials():
     random.shuffle(trials)
     return trials
 
+def prepare_test_trials():
+    trials = []
+    for class_name in CLASS_NAMES:
+        folder = os.path.join(TEST_IMAGE_DIR, class_name)
+        if os.path.exists(folder):
+            files = os.listdir(folder)
+            jpg_files = [f for f in files if f.lower().endswith('.jpg')]
+            if jpg_files:
+                selected = random.choice(jpg_files)
+                trials.append({
+                    'class_name': class_name,
+                    'image_path': os.path.join(folder, selected),
+                    'image_name': selected
+                })
+    random.shuffle(trials)
+    return trials
+
 # Encode image
 def encode_image(image_path):
     with open(image_path, 'rb') as f:
@@ -36,25 +55,65 @@ def encode_image(image_path):
 # Initialize app and session
 app = dash.Dash(__name__, suppress_callback_exceptions=True)
 app.title = "PIP-Net Bird Guessing App"
+user_guesses_data = []
+csv_path = "user_guesses.csv"
+if os.path.exists(csv_path):
+    user_guesses_data = pd.read_csv(csv_path).to_dict(orient='records')
 trials = prepare_trials()
 
 app.layout = html.Div([
     dcc.Store(id='trial-index', data=0),
     dcc.Store(id='guesses', data=[]),
     dcc.Store(id='control-index', data=0),
+    dcc.Store(id='phase3-index', data=0),
+    dcc.Store(id='phase3-guesses', data=[]),
+    dcc.Store(id='user-name', data=''),
 
-    html.H2("Guess the Bird Species"),
-    html.Div(id='trial-content', children=[]),
-    html.Div(id='completion-message', style={'color': 'green', 'fontSize': '18px', 'marginTop': '20px'}),
-    html.Div(id='post-phase1-buttons', style={'marginTop': '20px'}, children=[
-        html.Button("Control Phase", id='control-btn', n_clicks=0, style={'display': 'none'}),
-        html.Button("Treatment 1 Patch", id='treatment1-btn', n_clicks=0, style={'marginRight': '10px', 'display': 'none'}),
-        html.Button("Treatment 2 Rectangle", id='treatment2-btn', n_clicks=0, style={'display': 'none'})
+    html.Div(id='user-info', children=[
+        html.Label("Enter your name:"),
+        dcc.Input(id='user-name-input', type='text', placeholder='Your name', style={'marginRight': '10px'}),
+        html.Button("Start Phase 1: Guess the Bird", id='start-phase1-btn', n_clicks=0)
+    ], style={'marginBottom': '30px'}),
+
+    html.Div(id='phase1-container', style={'display': 'none'}, children=[
+        html.H2("Guess the Bird Species"),
+        html.Div(
+            id='guess-phase-container',
+            children=[
+                html.Div(id='trial-content', children=[]),
+                html.Div(id='completion-message', style={'color': 'green', 'fontSize': '18px', 'marginTop': '20px'})
+            ]
+        )
     ]),
-    html.Div(id='treatment1-content', style={'marginTop': '20px'}),
-    html.Div(id='control-phase-content', style={'marginTop': '20px'}),
-    html.Div(id='treatment2-content', style={'marginTop': '20px'}),
+
+    html.Div(id='phase2-container', children=[
+        html.Div(id='post-phase1-buttons', style={'marginTop': '20px'}, children=[
+            html.Button("Control Phase", id='control-btn', n_clicks=0, style={'display': 'none'}),
+            html.Button("Treatment 1 Patch", id='treatment1-btn', n_clicks=0, style={'marginRight': '10px', 'display': 'none'}),
+            html.Button("Treatment 2 Rectangle", id='treatment2-btn', n_clicks=0, style={'display': 'none'})
+        ]),
+        html.Div(id='treatment1-content', style={'marginTop': '20px'}),
+        html.Div(id='control-phase-content', style={'marginTop': '20px'}),
+        html.Div(id='treatment2-content', style={'marginTop': '20px'}),
+    ]),
+
+    html.Button("Move to Phase 3", id='to-phase3-btn', n_clicks=0, style={'display': 'none', 'marginTop': '20px'}),
+    html.Div(id='phase3-content', style={'marginTop': '20px'}),
+    dcc.Dropdown(id='phase3-user-guess', style={'display': 'none'}),
+    html.Button(id='phase3-next-btn', style={'display': 'none'}),
 ])
+
+@app.callback(
+    Output('phase1-container', 'style'),
+    Output('user-name', 'data'),
+    Input('start-phase1-btn', 'n_clicks'),
+    State('user-name-input', 'value'),
+    prevent_initial_call=True
+)
+def start_phase1(n_clicks, name):
+    if name:
+        return {'display': 'block'}, name
+    return dash.no_update, dash.no_update
 
 @app.callback(
     Output('trial-content', 'children'),
@@ -87,20 +146,30 @@ def show_trial(index, guesses):
     State('user-guess', 'value'),
     State('trial-index', 'data'),
     State('guesses', 'data'),
+    State('user-name', 'data'),
     prevent_initial_call=True
 )
-def save_guess(n_clicks, selection, index, guesses):
+def save_guess(n_clicks, selection, index, guesses, user_name):
     if index < TOTAL_TRIALS and selection:
         trial = trials[index]
         guesses.append({
             "class_name": trial["class_name"],
             "image_name": trial["image_name"],
-            "user_selection": selection
+            "user_selection": selection,
+            "user_name": user_name
         })
 
         index += 1
         if index == TOTAL_TRIALS:
-            pd.DataFrame(guesses).to_csv("user_guesses.csv", index=False)
+            for guess in guesses:
+                guess["teaching_phase"] = ""
+            global user_guesses_data
+            user_guesses_data = guesses
+            # Write combined CSV
+            df_existing = pd.read_csv(csv_path) if os.path.exists(csv_path) else pd.DataFrame()
+            df_new = pd.DataFrame(user_guesses_data)
+            df_combined = pd.concat([df_existing, df_new]).drop_duplicates(subset=["class_name", "user_name"], keep="last")
+            df_combined.to_csv(csv_path, index=False)
             return index, guesses, "✅ Thank you! Your guesses have been saved."
 
     return index, guesses, ""
@@ -117,6 +186,87 @@ def show_phase_buttons(msg):
         return {'display': 'inline-block', 'marginRight': '10px'}, {'display': 'inline-block', 'marginRight': '10px'}, {'display': 'inline-block'}
     return {'display': 'none'}, {'display': 'none'}, {'display': 'none'}
 
+@app.callback(
+    Output('to-phase3-btn', 'style'),
+    Input('control-btn', 'n_clicks'),
+    Input('treatment1-btn', 'n_clicks'),
+    Input('treatment2-btn', 'n_clicks')
+)
+def show_phase3_button(n1, n2, n3):
+    if any([n1, n2, n3]):
+        return {'display': 'inline-block', 'marginTop': '20px'}
+    return {'display': 'none'}
+
+@app.callback(
+    Output('phase3-index', 'data'),
+    Output('phase3-guesses', 'data'),
+    Output('phase3-content', 'children'),
+    Input('to-phase3-btn', 'n_clicks'),
+    Input('phase3-next-btn', 'n_clicks'),
+    State('phase3-user-guess', 'value'),
+    State('phase3-index', 'data'),
+    State('phase3-guesses', 'data'),
+    State('user-name', 'data'),
+    prevent_initial_call=True
+)
+def handle_phase3(to_phase3_clicks, next_clicks, selection, index, guesses, user_name):
+    global test_trials
+
+    # Prepare test trials on first click
+    if dash.callback_context.triggered_id == 'to-phase3-btn':
+        if not test_trials:
+            test_trials = prepare_test_trials()
+        if index >= len(test_trials):
+            return index, guesses, html.Div("✅ Testing phase completed!")
+        trial = test_trials[index]
+        return index, guesses, html.Div([
+            html.H4(f"Testing Phase: Bird {index + 1} of {len(test_trials)}"),
+            html.Img(src=encode_image(trial['image_path']), style={'width': '400px', 'marginBottom': '20px'}),
+            html.Label("Select the bird species:"),
+            dcc.Dropdown(
+                id='phase3-user-guess',
+                options=[{'label': name.replace('_', ' '), 'value': name} for name in CLASS_NAMES],
+                placeholder="Choose a species",
+                style={'width': '300px', 'marginBottom': '20px'}
+            ),
+            html.Button("Next (Testing)", id='phase3-next-btn', n_clicks=0)
+        ])
+
+    # Handle next guess
+    elif dash.callback_context.triggered_id == 'phase3-next-btn':
+        if index < len(test_trials) and selection:
+            trial = test_trials[index]
+            global user_guesses_data
+            # Instead of appending, update the existing record for the same class
+            for record in user_guesses_data:
+                if record["class_name"] == trial["class_name"]:
+                    record["testing_phase_class_shown"] = trial["class_name"]
+                    record["testing_phase_user_answer"] = selection
+                    break
+            index += 1
+            # Write combined CSV
+            df_existing = pd.read_csv(csv_path) if os.path.exists(csv_path) else pd.DataFrame()
+            df_new = pd.DataFrame(user_guesses_data)
+            df_combined = pd.concat([df_existing, df_new]).drop_duplicates(subset=["class_name", "user_name"], keep="last")
+            df_combined.to_csv(csv_path, index=False)
+            if index == len(test_trials):
+                return index, guesses, html.Div("✅ Testing phase completed!")
+            next_trial = test_trials[index]
+            return index, guesses, html.Div([
+                html.H4(f"Testing Phase: Bird {index + 1} of {len(test_trials)}"),
+                html.Img(src=encode_image(next_trial['image_path']), style={'width': '400px', 'marginBottom': '20px'}),
+                html.Label("Select the bird species:"),
+                dcc.Dropdown(
+                    id='phase3-user-guess',
+                    options=[{'label': name.replace('_', ' '), 'value': name} for name in CLASS_NAMES],
+                    placeholder="Choose a species",
+                    style={'width': '300px', 'marginBottom': '20px'}
+                ),
+                html.Button("Next (Testing)", id='phase3-next-btn', n_clicks=0)
+            ])
+        return index, guesses, dash.no_update
+
+    return dash.no_update, dash.no_update, dash.no_update
 
 @app.callback(
     Output('control-phase-content', 'children'),
@@ -124,6 +274,13 @@ def show_phase_buttons(msg):
     prevent_initial_call=True
 )
 def render_control_phase_all(n_clicks):
+    for record in user_guesses_data:
+        record["teaching_phase"] = "control"
+    # Write combined CSV
+    df_existing = pd.read_csv(csv_path) if os.path.exists(csv_path) else pd.DataFrame()
+    df_new = pd.DataFrame(user_guesses_data)
+    df_combined = pd.concat([df_existing, df_new]).drop_duplicates(subset=["class_name", "user_name"], keep="last")
+    df_combined.to_csv(csv_path, index=False)
     children = []
     for class_name in CLASS_NAMES:
         folder = os.path.join(VIS_RESULT_DIR, class_name)
@@ -144,6 +301,13 @@ def render_control_phase_all(n_clicks):
     prevent_initial_call=True
 )
 def render_treatment1_patch(n_clicks):
+    for record in user_guesses_data:
+        record["teaching_phase"] = "treatment1"
+    # Write combined CSV
+    df_existing = pd.read_csv(csv_path) if os.path.exists(csv_path) else pd.DataFrame()
+    df_new = pd.DataFrame(user_guesses_data)
+    df_combined = pd.concat([df_existing, df_new]).drop_duplicates(subset=["class_name", "user_name"], keep="last")
+    df_combined.to_csv(csv_path, index=False)
     children = []
     for class_name in CLASS_NAMES:
         class_dir = os.path.join(VIS_RESULT_DIR, class_name)
@@ -193,6 +357,13 @@ def render_treatment1_patch(n_clicks):
     prevent_initial_call=True
 )
 def render_treatment2_rectangle(n_clicks):
+    for record in user_guesses_data:
+        record["teaching_phase"] = "treatment2"
+    # Write combined CSV
+    df_existing = pd.read_csv(csv_path) if os.path.exists(csv_path) else pd.DataFrame()
+    df_new = pd.DataFrame(user_guesses_data)
+    df_combined = pd.concat([df_existing, df_new]).drop_duplicates(subset=["class_name", "user_name"], keep="last")
+    df_combined.to_csv(csv_path, index=False)
     children = []
     for class_name in CLASS_NAMES:
         class_dir = os.path.join(VIS_RESULT_DIR, class_name)
@@ -235,6 +406,16 @@ def render_treatment2_rectangle(n_clicks):
             html.Div(rect_images, style={'display': 'flex', 'flexWrap': 'wrap', 'marginBottom': '40px'})
         ]))
     return children
+
+@app.callback(
+    Output('phase2-container', 'style'),
+    Input('to-phase3-btn', 'n_clicks'),
+    prevent_initial_call=True
+)
+def hide_phase2(n):
+    if n:
+        return {'display': 'none'}
+    return dash.no_update
 
 if __name__ == '__main__':
     app.run(debug=True)
