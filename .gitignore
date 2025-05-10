@@ -1,0 +1,40 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual environment
+venv/
+.env/
+
+# Jupyter Notebook checkpoints
+.ipynb_checkpoints/
+
+# VS Code settings
+.vscode/
+
+# System files
+.DS_Store
+Thumbs.db
+
+# Log and data directories
+data/
+*.log
+*.xlsx
+*.csv
+
+# Dash cache
+*.db
+.cache/
+.pytest_cache/
+
+# Python environment
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Local settings
+*.env
+.env.*
+
+# pyenv
+.python-version
