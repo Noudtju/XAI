@@ -63,7 +63,14 @@ if os.path.exists(csv_path):
 trials = prepare_trials()
 
 # Initialize layout
-app.layout = html.Div([
+app.layout = html.Div(style={
+    'backgroundImage': 'url("/assets/pip_net_bird_image.png")', 
+    'backgroundSize': 'cover',
+    'backgroundRepeat': 'no-repeat',
+    'backgroundPosition': 'center',
+    'minHeight': '100vh',
+    'padding': '30px'
+}, children=[
     dcc.Store(id='trial-index', data=0),
     dcc.Store(id='guesses', data=[]),
     dcc.Store(id='control-index', data=0),
@@ -71,29 +78,121 @@ app.layout = html.Div([
     dcc.Store(id='phase3-guesses', data=[]),
     dcc.Store(id='user-name', data=''),
 
-    html.Div(id='user-info', children=[
-        html.Label("Enter your name:"),
-        dcc.Input(id='user-name-input', type='text', placeholder='Your name', style={'marginRight': '10px'}),
-        html.Button("Start Phase 1: Guess the Bird", id='start-phase1-btn', n_clicks=0)
-    ], style={'marginBottom': '30px'}),
-
-    html.Div(id='phase1-container', style={'display': 'none'}, children=[
-        html.H2("Guess the Bird Species"),
-        html.Div(
-            id='guess-phase-container',
-            children=[
-                html.Div(id='trial-content', children=[]),
-                html.Div(id='completion-message', style={'color': 'green', 'fontSize': '18px', 'marginTop': '20px'})
-            ]
-        )
+    html.Div(id='user-info', style={
+        'display': 'flex',
+        'flexDirection': 'column',
+        'alignItems': 'center',
+        'justifyContent': 'center',
+        'marginBottom': '30px',
+        'height': '100vh',
+        'textAlign': 'center'
+    }, children=[
+        html.Label("Enter your name:", style={'fontSize': '22px', 'marginBottom': '15px'}),
+        dcc.Input(
+            id='user-name-input',
+            type='text',
+            placeholder='Your name',
+            style={'marginBottom': '20px', 'padding': '10px', 'fontSize': '18px', 'width': '350px'}
+        ),
+        html.Button("Start Phase 1: Guess the Bird", id='start-phase1-btn', n_clicks=0, style={
+            'padding': '12px 24px',
+            'fontSize': '18px',
+            'cursor': 'pointer'
+        })
     ]),
 
+    html.Div(
+        id='phase1-container',
+        style={'display': 'none', 'width': '100%', 'maxWidth': '600px', 'margin': '0 auto', 'padding': '30px 0'},
+        children=[
+            html.H2("Guess the Bird Species", style={'textAlign': 'center', 'marginBottom': '30px'}),
+            html.Div(
+                id='guess-phase-container',
+                style={
+                    'display': 'flex',
+                    'flexDirection': 'column',
+                    'alignItems': 'center',
+                    'justifyContent': 'center',
+                    'minHeight': '100vh',
+                    'textAlign': 'center'
+                },
+                children=[
+                    html.Div(id='trial-content', children=[]),
+                    html.Div(
+                        id='completion-message',
+                        style={
+                            'color': 'white',
+                            'backgroundColor': 'green',
+                            'padding': '15px 25px',
+                            'borderRadius': '8px',
+                            'fontSize': '20px',
+                            'marginTop': '30px',
+                            'boxShadow': '0 4px 8px rgba(0, 0, 0, 0.2)',
+                            'display': 'block'
+                        }
+                    )
+                ]
+            )
+        ]
+    ),
+
     html.Div(id='phase2-container', children=[
-        html.Div(id='post-phase1-buttons', style={'marginTop': '20px'}, children=[
-            html.Button("Control Phase", id='control-btn', n_clicks=0, style={'display': 'none'}),
-            html.Button("Treatment 1 Patch", id='treatment1-btn', n_clicks=0, style={'marginRight': '10px', 'display': 'none'}),
-            html.Button("Treatment 2 Rectangle", id='treatment2-btn', n_clicks=0, style={'display': 'none'})
-        ]),
+        html.Div(
+            id='post-phase1-buttons',
+            style={
+                'marginTop': '20px',
+                'display': 'flex',
+                'justifyContent': 'center',
+                'gap': '20px'
+            },
+            children=[
+                html.Button(
+                    "Control Phase",
+                    id='control-btn',
+                    n_clicks=0,
+                    style={
+                        'display': 'none',
+                        'padding': '18px 36px',
+                        'fontSize': '20px',
+                        'cursor': 'pointer',
+                        'border': 'none',
+                        'borderRadius': '6px',
+                        'backgroundColor': '#ffffff',
+                        'boxShadow': '0px 4px 8px rgba(0, 0, 0, 0.1)'
+                    }
+                ),
+                html.Button(
+                    "Treatment 1 Patch",
+                    id='treatment1-btn',
+                    n_clicks=0,
+                    style={
+                        'display': 'none',
+                        'padding': '18px 36px',
+                        'fontSize': '20px',
+                        'cursor': 'pointer',
+                        'border': 'none',
+                        'borderRadius': '6px',
+                        'backgroundColor': '#ffffff',
+                        'boxShadow': '0px 4px 8px rgba(0, 0, 0, 0.1)'
+                    }
+                ),
+                html.Button(
+                    "Treatment 2 Rectangle",
+                    id='treatment2-btn',
+                    n_clicks=0,
+                    style={
+                        'display': 'none',
+                        'padding': '18px 36px',
+                        'fontSize': '20px',
+                        'cursor': 'pointer',
+                        'border': 'none',
+                        'borderRadius': '6px',
+                        'backgroundColor': '#ffffff',
+                        'boxShadow': '0px 4px 8px rgba(0, 0, 0, 0.1)'
+                    }
+                )
+            ]
+        ),
         html.Div(id='treatment1-content', style={'marginTop': '20px'}),
         html.Div(id='control-phase-content', style={'marginTop': '20px'}),
         html.Div(id='treatment2-content', style={'marginTop': '20px'}),
@@ -108,14 +207,15 @@ app.layout = html.Div([
 @app.callback(
     Output('phase1-container', 'style'),
     Output('user-name', 'data'),
+    Output('user-info', 'style'),
     Input('start-phase1-btn', 'n_clicks'),
     State('user-name-input', 'value'),
     prevent_initial_call=True
 )
 def start_phase1(n_clicks, name):
     if name:
-        return {'display': 'block'}, name
-    return dash.no_update, dash.no_update
+        return {'display': 'block'}, name, {'display': 'none'}
+    return dash.no_update, dash.no_update, dash.no_update
 
 @app.callback(
     Output('trial-content', 'children'),
@@ -130,13 +230,20 @@ def show_trial(index, guesses):
     return html.Div([
         html.H4(f"Bird {index + 1} of {TOTAL_TRIALS}"),
         html.Img(src=encode_image(trial['image_path']), style={'width': '400px', 'marginBottom': '20px'}),
-        html.Label("Select the bird species:"),
-        dcc.Dropdown(
-            id='user-guess',
-            options=[{'label': name.replace('_', ' '), 'value': name} for name in CLASS_NAMES],
-            placeholder="Choose a species",
-            style={'width': '300px', 'marginBottom': '20px'}
-        ),
+        html.Div([
+            html.Label("Select the bird species:", style={'fontSize': '18px', 'marginRight': '10px'}),
+            dcc.Dropdown(
+                id='user-guess',
+                options=[{'label': name.replace('_', ' '), 'value': name} for name in CLASS_NAMES] + [{'label': "I don't know", 'value': "I don't know"}],
+                placeholder="Choose a species",
+                style={'width': '300px', 'fontSize': '16px'}
+            )
+        ], style={
+            'display': 'flex',
+            'alignItems': 'center',
+            'justifyContent': 'center',
+            'marginBottom': '20px'
+        }),
         html.Button("Next", id='next-btn', n_clicks=0)
     ])
 
@@ -220,19 +327,44 @@ def handle_phase3(to_phase3_clicks, next_clicks, selection, index, guesses, user
         if not test_trials:
             test_trials = prepare_test_trials()
         if index >= len(test_trials):
-            return index, guesses, html.Div("✅ Testing phase completed!")
+            return index, guesses, html.Div("✅ Testing phase completed!", style={
+                'color': 'white',
+                'backgroundColor': 'green',
+                'padding': '15px 25px',
+                'borderRadius': '8px',
+                'fontSize': '20px',
+                'marginTop': '30px',
+                'textAlign': 'center',
+                'boxShadow': '0 4px 8px rgba(0, 0, 0, 0.2)'
+            })
         trial = test_trials[index]
+        # Updated layout for both 'to-phase3-btn' and 'phase3-next-btn'
         return index, guesses, html.Div([
-            html.H4(f"Testing Phase: Bird {index + 1} of {len(test_trials)}"),
-            html.Img(src=encode_image(trial['image_path']), style={'width': '400px', 'marginBottom': '20px'}),
-            html.Label("Select the bird species:"),
-            dcc.Dropdown(
-                id='phase3-user-guess',
-                options=[{'label': name.replace('_', ' '), 'value': name} for name in CLASS_NAMES],
-                placeholder="Choose a species",
-                style={'width': '300px', 'marginBottom': '20px'}
-            ),
-            html.Button("Next (Testing)", id='phase3-next-btn', n_clicks=0)
+            html.Div(style={
+                'width': '100%',
+                'maxWidth': '600px',
+                'margin': '0 auto',
+                'padding': '30px 0',
+                'textAlign': 'center'
+            }, children=[
+                html.H4(f"Testing Phase: Bird {index + 1} of {len(test_trials)}", style={'marginBottom': '30px'}),
+                html.Img(src=encode_image(trial['image_path']), style={'width': '400px', 'marginBottom': '20px'}),
+                html.Div([
+                    html.Label("Select the bird species:", style={'fontSize': '18px', 'marginRight': '10px'}),
+                    dcc.Dropdown(
+                        id='phase3-user-guess',
+                        options=[{'label': name.replace('_', ' '), 'value': name} for name in CLASS_NAMES] + [{'label': "I don't know", 'value': "I don't know"}],
+                        placeholder="Choose a species",
+                        style={'width': '300px', 'fontSize': '16px'}
+                    )
+                ], style={
+                    'display': 'flex',
+                    'alignItems': 'center',
+                    'justifyContent': 'center',
+                    'marginBottom': '20px'
+                }),
+                html.Button("Next (Testing)", id='phase3-next-btn', n_clicks=0)
+            ])
         ])
 
     # Handle next guess
@@ -253,19 +385,44 @@ def handle_phase3(to_phase3_clicks, next_clicks, selection, index, guesses, user
             df_combined = pd.concat([df_existing, df_new]).drop_duplicates(subset=["class_name", "user_name"], keep="last")
             df_combined.to_csv(csv_path, index=False)
             if index == len(test_trials):
-                return index, guesses, html.Div("✅ Testing phase completed!")
+                return index, guesses, html.Div("✅ Testing phase completed!", style={
+                    'color': 'white',
+                    'backgroundColor': 'green',
+                    'padding': '15px 25px',
+                    'borderRadius': '8px',
+                    'fontSize': '20px',
+                    'marginTop': '30px',
+                    'textAlign': 'center',
+                    'boxShadow': '0 4px 8px rgba(0, 0, 0, 0.2)'
+                })
             next_trial = test_trials[index]
+            # Updated layout for both 'to-phase3-btn' and 'phase3-next-btn'
             return index, guesses, html.Div([
-                html.H4(f"Testing Phase: Bird {index + 1} of {len(test_trials)}"),
-                html.Img(src=encode_image(next_trial['image_path']), style={'width': '400px', 'marginBottom': '20px'}),
-                html.Label("Select the bird species:"),
-                dcc.Dropdown(
-                    id='phase3-user-guess',
-                    options=[{'label': name.replace('_', ' '), 'value': name} for name in CLASS_NAMES],
-                    placeholder="Choose a species",
-                    style={'width': '300px', 'marginBottom': '20px'}
-                ),
-                html.Button("Next (Testing)", id='phase3-next-btn', n_clicks=0)
+                html.Div(style={
+                    'width': '100%',
+                    'maxWidth': '600px',
+                    'margin': '0 auto',
+                    'padding': '30px 0',
+                    'textAlign': 'center'
+                }, children=[
+                    html.H4(f"Testing Phase: Bird {index + 1} of {len(test_trials)}", style={'marginBottom': '30px'}),
+                    html.Img(src=encode_image(next_trial['image_path']), style={'width': '400px', 'marginBottom': '20px'}),
+                    html.Div([
+                        html.Label("Select the bird species:", style={'fontSize': '18px', 'marginRight': '10px'}),
+                        dcc.Dropdown(
+                            id='phase3-user-guess',
+                            options=[{'label': name.replace('_', ' '), 'value': name} for name in CLASS_NAMES] + [{'label': "I don't know", 'value': "I don't know"}],
+                            placeholder="Choose a species",
+                            style={'width': '300px', 'fontSize': '16px'}
+                        )
+                    ], style={
+                        'display': 'flex',
+                        'alignItems': 'center',
+                        'justifyContent': 'center',
+                        'marginBottom': '20px'
+                    }),
+                    html.Button("Next (Testing)", id='phase3-next-btn', n_clicks=0)
+                ])
             ])
         return index, guesses, dash.no_update
 
@@ -425,3 +582,29 @@ def hide_phase2(n):
 
 if __name__ == '__main__':
     app.run(debug=True)
+
+# Hide phase1-container when any Phase 2 button is clicked
+@app.callback(
+    Output('phase1-container', 'style'),
+    Input('control-btn', 'n_clicks'),
+    Input('treatment1-btn', 'n_clicks'),
+    Input('treatment2-btn', 'n_clicks'),
+    prevent_initial_call=True
+)
+def hide_phase1(n1, n2, n3):
+    if any([n1, n2, n3]):
+        return {'display': 'none'}
+    return dash.no_update
+
+# Hide completion-message when any Phase 2 button is clicked
+@app.callback(
+    Output('completion-message', 'style'),
+    Input('control-btn', 'n_clicks'),
+    Input('treatment1-btn', 'n_clicks'),
+    Input('treatment2-btn', 'n_clicks'),
+    prevent_initial_call=True
+)
+def hide_completion_msg(n1, n2, n3):
+    if any([n1, n2, n3]):
+        return {'display': 'none'}
+    return dash.no_update
